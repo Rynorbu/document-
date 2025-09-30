@@ -65,7 +65,6 @@ graph TB
                 BS[Booking Service<br/>Container]
                 AWS[Approval Workflow<br/>Container]
                 NS[Notification Service<br/>Container]
-                PS[Payment Service<br/>Container]
             end
         end
         
@@ -77,7 +76,6 @@ graph TB
         subgraph "Integration Tier"
             MSG[Message Queue<br/>RabbitMQ/Kafka]
             MAIL[Email Service<br/>SendGrid/SES]
-            PAY[Payment Gateway<br/>Stripe/PayPal]
             SMS[SMS Service<br/>Twilio]
         end
         
@@ -88,7 +86,6 @@ graph TB
     end
     
     subgraph "External Systems"
-        BANK[Banking System]
         COLLEGE[College Management<br/>System]
     end
 
@@ -105,7 +102,6 @@ graph TB
     API --> BS
     API --> AWS
     API --> NS
-    API --> PS
     
     %% Service to data connections
     US --> DB
@@ -113,7 +109,6 @@ graph TB
     BS --> DB
     AWS --> DB
     NS --> CACHE
-    PS --> DB
     
     %% Cache connections
     US --> CACHE
@@ -123,13 +118,10 @@ graph TB
     BS --> MSG
     AWS --> MSG
     NS --> MSG
-    PS --> MSG
     
     %% External service connections
     NS --> MAIL
     NS --> SMS
-    PS --> PAY
-    PAY --> BANK
     AWS --> COLLEGE
     
     %% Monitoring connections
@@ -138,7 +130,6 @@ graph TB
     BS -.-> MON
     AWS -.-> MON
     NS -.-> MON
-    PS -.-> MON
     API -.-> LOG
 
     %% Styling
@@ -151,38 +142,34 @@ graph TB
     
     class WEB,MOB,ADMIN client
     class CDN,LB,API infrastructure
-    class US,GS,BS,AWS,NS,PS application
+    class US,GS,BS,AWS,NS application
     class DB,CACHE,MSG data
-    class BANK,COLLEGE,MAIL,SMS,PAY external
+    class COLLEGE,MAIL,SMS external
     class MON,LOG monitoring
 ```
 
 ## Low-Level Physical Architecture Diagram
 
 ```mermaid
-graph TB
-    subgraph "Production Environment - AWS Cloud"
-        subgraph "Availability Zone 1"
-            subgraph "Public Subnet 1"
-                ALB1[Application Load Balancer<br/>Instance 1<br/>IP: 10.0.1.10]
-                NAT1[NAT Gateway<br/>IP: 10.0.1.20]
+flowchart TB
+    %% AWS Region and VPC Structure
+    subgraph AWS_REGION ["🌎 AWS REGION: US-EAST-1 (N. Virginia)"]
+        direction TB
+        
+        subgraph VPC_MAIN ["🏗️ VPC: 1-Stop-Book-Production (10.0.0.0/16)"]
+            direction TB
+            
+            %% Internet Gateway and Route 53
+            subgraph INTERNET_SERVICES ["🌐 INTERNET SERVICES"]
+                direction LR
+                IGW["🔗 Internet Gateway<br/>IGW-1stopbook<br/>VPC Attachment"]
+                ROUTE53["🔗 Route 53<br/>Domain: 1stopbook.com<br/>Hosted Zone ID: Z123456<br/>TTL: 300s"]
+                CF_DIST["📡 CloudFront Distribution<br/>ID: E123456789ABCDEF<br/>Domain: cdn.1stopbook.com<br/>Origins: ALB + S3<br/>Cache Behaviors: 10"]
             end
             
-            subgraph "Private Subnet 1 - Application"
-                ECS1[ECS Fargate Cluster 1<br/>IP Range: 10.0.2.0/24]
-                
-                subgraph "Microservices - AZ1"
-                    US1[User Service<br/>Container: 10.0.2.10<br/>CPU: 0.5 vCPU, RAM: 1GB<br/>Port: 3001]
-                    GS1[Grounds Service<br/>Container: 10.0.2.11<br/>CPU: 0.5 vCPU, RAM: 1GB<br/>Port: 3002]
-                    BS1[Booking Service<br/>Container: 10.0.2.12<br/>CPU: 1 vCPU, RAM: 2GB<br/>Port: 3003]
-                end
-            end
-            
-            subgraph "Private Subnet 1 - Data"
-                RDS1[(RDS PostgreSQL Primary<br/>Instance: db.t3.medium<br/>IP: 10.0.3.10<br/>Port: 5432<br/>Storage: 100GB SSD)]
-                REDIS1[(ElastiCache Redis<br/>Node: cache.t3.micro<br/>IP: 10.0.3.20<br/>Port: 6379)]
-            end
-        end
+            %% Availability Zone 1 - Complete Infrastructure
+            subgraph AZ1 ["📍 AVAILABILITY ZONE 1: us-east-1a"]
+                direction TB
         
         subgraph "Availability Zone 2"
             subgraph "Public Subnet 2"
@@ -218,8 +205,6 @@ graph TB
     end
     
     subgraph "External Services"
-        STRIPE[Stripe Payment Gateway<br/>Webhook: /webhooks/stripe<br/>API Version: 2023-10-16]
-        
         SES[Amazon SES<br/>Email Service<br/>Domain: mail.1stopbook.com<br/>Rate: 200 emails/day]
         
         TWILIO[Twilio SMS<br/>Phone: +1-xxx-xxx-xxxx<br/>Rate: 1000 SMS/month]
@@ -269,8 +254,6 @@ graph TB
     BS2 --> SQS
     
     %% External Service Connections
-    BS1 --> STRIPE
-    BS2 --> STRIPE
     US1 --> SES
     US2 --> SES
     US1 --> TWILIO
@@ -298,7 +281,7 @@ graph TB
     class ECS1,ECS2,APIGW,SQS,S3,CF,CW,WAF,SECRETS,IAM,SES,ROUTE53 aws
     class RDS1,RDS2,REDIS1,REDIS2 database
     class US1,GS1,BS1,US2,GS2,BS2 container
-    class STRIPE,TWILIO external
+    class TWILIO external
     class WAF,SECRETS,IAM security
     class ALB1,ALB2,NAT1,NAT2 network
 ```
@@ -406,7 +389,6 @@ The application services are deployed on AWS ECS Fargate, a serverless container
 | Booking Service | 1 vCPU, 2GB RAM | 3003 | /health | Min: 2, Max: 15 |
 | Approval Workflow | 0.5 vCPU, 1GB RAM | 3004 | /health | Min: 1, Max: 5 |
 | Notification Service | 0.5 vCPU, 1GB RAM | 3005 | /health | Min: 2, Max: 8 |
-| Payment Service | 1 vCPU, 2GB RAM | 3006 | /health | Min: 2, Max: 10 |
 
 ### Data Flow and Communication Patterns
 

@@ -3,7 +3,7 @@ Introduction
 Background  
 Provide the background and context of the project and its current status from a project perspective. 
 In Bhutan, booking services whether for sports fields, healthcare appointments, salons, or tourism still largely rely on traditional methods such as phone calls, in-person visits, or manual coordination. This outdated approach often results in inefficiencies, including miscommunications, double bookings, and delays in service delivery. For instance, the Ministry of Health has acknowledged difficulties in managing patient appointments, emphasizing the need for improved systems to reduce wait times and enhance service efficiency (Dema, 2024).
-Similarly, the Bhutan Football Federation (BFF) recently shared information about ground bookings through a social media post, asking people to contact a phone number to make reservations. This method drew public criticism, with many highlighting the urgent need for an online booking system (Bhutan Broadcasting Service, 2020). The tourism sector also faces comparable challenges. Although initiatives like the Tourism Bhutan app have been introduced, users frequently report issues such as crashes, connectivity problems, and unreliable payment systems, which further add to user frustration and operational strain (Reguerra, 2024).
+Similarly, the Bhutan Football Federation (BFF) recently shared information about ground bookings through a social media post, asking people to contact a phone number to make reservations. This method drew public criticism, with many highlighting the urgent need for an online booking system (Bhutan Broadcasting Service, 2020). The tourism sector also faces comparable challenges. Although initiatives like the Tourism Bhutan app have been introduced, users frequently report issues such as crashes, connectivity problems, and system reliability issues, which further add to user frustration and operational strain (Reguerra, 2024).
 Recognizing these challenges, the 1-Stop Book project seeks to provide a centralized, user-friendly platform that integrates multiple booking services into a single application. For this semester, the project will begin by developing a ground booking system for our college. In the long term, the scope will expand to include healthcare, salon, restaurant, and tourism bookings, and extend its reach to other colleges and institutions. By consolidating services, the platform aims to enable real-time availability checks, reduce administrative burdens, and improve overall user experience, ultimately supporting Bhutan’s digital transformation journey 
 
 
@@ -50,7 +50,6 @@ In Scope
 Development of the booking platform focusing on football ground bookings as the first implemented service.
 User registration and login functionality.
 Booking management (view, create, cancel bookings).
-Basic payment integration.
 Admin panel for managing bookings and service availability.
 
 Out of Scope
@@ -63,14 +62,12 @@ Briefly list down the requirements that are in the scope of the project.
 User registration, login, and profile management.
 Search and view available football grounds.
 Create, modify, and cancel bookings.
-Payment processing for bookings.
 Admin panel for booking and availability management.
 Notifications for booking confirmations and reminders.
 
 Functionality out of scope
 Briefly list down the requirements that are out of scope of the project.
 Booking for services other than football grounds (in Phase 1).
-Advanced payment options like installment or subscriptions.
 Loyalty programs or gamification features.
 Analytics or reports for service providers.
 

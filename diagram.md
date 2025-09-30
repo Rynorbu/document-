@@ -4,11 +4,13 @@
 
 1. [Overview](#overview)
 2. [High-Level Architecture](#high-level-architecture)
+   - [Interaction Overview Diagram](#interaction-overview-diagram)
+   - [Use Case Diagram](#use-case-diagram)
    - [System Context Diagram](#system-context-diagram)
    - [Logical Architecture Overview](#logical-architecture-overview)
 3. [Detailed Architecture](#detailed-architecture)
    - [Microservices Architecture](#microservices-architecture)
-   - [Data Flow & Interactions](#data-flow--interactions)
+   - [Detailed Booking Sequence Diagram](#detailed-booking-sequence-diagram)
    - [Component Architecture](#component-architecture)
 4. [Infrastructure & Deployment](#infrastructure--deployment)
    - [Deployment Architecture](#deployment-architecture)
@@ -34,6 +36,126 @@ This document provides comprehensive architectural diagrams for the **1-Stop Boo
 
 ## High-Level Architecture
 
+### Interaction Overview Diagram
+
+The interaction overview diagram shows the main booking workflow with decision points and alternative flows based on the system's business logic.
+
+```mermaid
+flowchart TD
+    START([User Starts Booking Process])
+    
+    SEARCH[Search Available Grounds]
+    FILTER{Apply Filters?}
+    VIEW_DETAILS[View Ground Details]
+    SELECT_SLOT[Select Time Slot]
+    
+    CHECK_CONFLICT{Slot Available?}
+    SHOW_ALTERNATIVES[Show Alternative Times]
+    SELECT_ALT{Select Alternative?}
+    
+    CREATE_BOOKING[Create Booking Request]
+    PROCESS_BOOKING[System Processes Booking]
+    
+    AUTO_APPROVE{Auto-approval Enabled?}
+    PENDING_APPROVAL[Set Status: Pending Approval]
+    CONFIRM_BOOKING[Confirm Booking]
+    
+    SEND_NOTIFICATION[Send Confirmation Notification]
+    CALENDAR_UPDATE[Update Calendar/Availability]
+    
+    END_SUCCESS([Booking Completed Successfully])
+    END_CANCEL([Booking Cancelled])
+    
+    %% Main Flow
+    START --> SEARCH
+    SEARCH --> FILTER
+    FILTER -->|Yes| SEARCH
+    FILTER -->|No| VIEW_DETAILS
+    VIEW_DETAILS --> SELECT_SLOT
+    
+    %% Availability Check
+    SELECT_SLOT --> CHECK_CONFLICT
+    CHECK_CONFLICT -->|Available| CREATE_BOOKING
+    CHECK_CONFLICT -->|Conflict| SHOW_ALTERNATIVES
+    
+    %% Alternative Flow
+    SHOW_ALTERNATIVES --> SELECT_ALT
+    SELECT_ALT -->|Yes| SELECT_SLOT
+    SELECT_ALT -->|No| END_CANCEL
+    
+    %% Booking Process
+    CREATE_BOOKING --> PROCESS_BOOKING
+    PROCESS_BOOKING --> AUTO_APPROVE
+    
+    %% Approval Flow
+    AUTO_APPROVE -->|Yes| CONFIRM_BOOKING
+    AUTO_APPROVE -->|No| PENDING_APPROVAL
+    PENDING_APPROVAL --> CONFIRM_BOOKING
+    
+    %% Completion
+    CONFIRM_BOOKING --> SEND_NOTIFICATION
+    SEND_NOTIFICATION --> CALENDAR_UPDATE
+    CALENDAR_UPDATE --> END_SUCCESS
+    
+    style START fill:#e8f5e8,stroke:#2e7d32,stroke-width:3px
+    style END_SUCCESS fill:#e8f5e8,stroke:#2e7d32,stroke-width:3px
+    style END_CANCEL fill:#ffebee,stroke:#c62828,stroke-width:3px
+    style CHECK_CONFLICT fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
+    style AUTO_APPROVE fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
+    style SELECT_ALT fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
+```
+
+### Use Case Diagram
+
+The use case diagram shows the primary interactions between actors and the 1-Stop Book system, representing the core functionalities for booking management.
+
+```mermaid
+graph TD
+    User((User))
+    Admin((Admin))
+    System((System))
+    
+    subgraph "1-Stop Book System"
+        UC1[Search Grounds]
+        UC2[View Ground Details]
+        UC3[Check Availability]
+        UC4[Make Booking]
+        UC5[View My Bookings]
+        UC6[Cancel Booking]
+        UC7[Reschedule Booking]
+        UC8[Manage Grounds]
+        UC9[View All Bookings]
+        UC10[Manage Users]
+        UC11[Generate Reports]
+        UC12[Send Notifications]
+    end
+    
+    %% User use cases
+    User --> UC1
+    User --> UC2
+    User --> UC3
+    User --> UC4
+    User --> UC5
+    User --> UC6
+    User --> UC7
+    
+    %% Admin use cases
+    Admin --> UC8
+    Admin --> UC9
+    Admin --> UC10
+    Admin --> UC11
+    
+    %% System use cases
+    System --> UC12
+    
+    %% Dependencies
+    UC4 --> UC3
+    UC7 --> UC3
+    UC12 --> UC4
+    UC12 --> UC6
+    UC12 --> UC7
+```
+
 ### System Context Diagram
 
 This diagram shows the system boundaries and external interactions.
@@ -43,7 +165,6 @@ graph TB
     subgraph "External Actors"
         U["👥 Students/Faculty/Staff<br/>🎓 End Users"]
         A["👤 Admin Users<br/>🔐 System Administrators"]
-        P["💳 Payment Gateway<br/>💰 Stripe/PayPal"]
         E["📧 Email/SMS Provider<br/>📱 SendGrid/Twilio"]
     end
     
@@ -53,13 +174,11 @@ graph TB
     
     U -->|📝 Makes Bookings<br/>🔍 Search Grounds| SYS
     A -->|⚙️ Manages System<br/>📊 Admin Operations| SYS
-    SYS -->|💰 Process Payments<br/>💳 Secure Transactions| P
-    SYS -->|📨 Send Notifications<br/>📲 Alerts & Updates| E
+    SYS -->| Send Notifications<br/>📲 Alerts & Updates| E
     
     style SYS fill:#e1f5fe,stroke:#01579b,stroke-width:3px
     style U fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
     style A fill:#fff3e0,stroke:#e65100,stroke-width:2px
-    style P fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
     style E fill:#fff8e1,stroke:#f57f17,stroke-width:2px
 ```
 
@@ -83,7 +202,6 @@ graph TB
             BS["📋 Booking Service<br/>🎫 Reservation Logic<br/>📊 Booking Lifecycle"]
             AWS["✅ Approval Workflow<br/>🔄 Business Rules<br/>⏰ Auto/Manual Approval"]
             NS["📢 Notification Service<br/>📧 Multi-channel Alerts<br/>🔔 Real-time Updates"]
-            PS["💳 Payment Service<br/>💰 Transaction Processing<br/>🧾 Invoice Management"]
         end
         
         EB["🚌 Event Bus<br/>⚡ RabbitMQ/Kafka<br/>📡 Async Communication"]
@@ -95,7 +213,6 @@ graph TB
     end
     
     subgraph "🌐 External Services"
-        PAY["💳 Payment Gateway<br/>💎 Stripe/PayPal<br/>🔒 Secure Processing"]
         EMAIL["📧 Email Service<br/>📮 SendGrid/AWS SES<br/>📬 Reliable Delivery"]
         SMS["📱 SMS Service<br/>📲 Twilio<br/>💬 Text Messaging"]
     end
@@ -108,7 +225,6 @@ graph TB
     GW -->|📋 Booking Requests| BS
     GW -->|✅ Approval Flows| AWS
     GW -->|📢 Notifications| NS
-    GW -->|💳 Payments| PS
     
     US -->|📝 User Data| DB
     GS -->|🏟️ Ground Data| DB
@@ -120,8 +236,6 @@ graph TB
     BS -.->|📋 Booking Events| EB
     AWS -.->|✅ Approval Events| EB
     NS -.->|📢 Notification Events| EB
-    
-    PS -->|💰 Process Payments| PAY
     NS -->|📧 Send Emails| EMAIL
     NS -->|📱 Send SMS| SMS
     
@@ -158,7 +272,6 @@ graph TB
 - Cache layer for session management and performance optimization
 
 **External Services:**
-- Payment gateway for transaction processing
 - Email/SMS services for notifications
 
 ---
@@ -206,10 +319,7 @@ graph TB
             NSC[("⚡ Notification Cache<br/>🔴 Redis<br/>🚀 Fast Delivery")]
         end
         
-        subgraph "💰 Payment Processing"
-            PS["💳 Payment Service<br/>💰 Payment Processing<br/>📊 Transaction History<br/>💸 Refund Management<br/>🧾 Invoice Generation"]
-            PSC[("💳 Payment DB<br/>🗄️ PostgreSQL<br/>💰 Financial Records")]
-        end
+
     end
     
     subgraph "🚌 Message Broker"
@@ -217,7 +327,6 @@ graph TB
     end
     
     subgraph "🌐 External Services"
-        PAY["💎 Payment Gateway<br/>💳 Stripe / PayPal<br/>🔒 Secure Processing"]
         EMAIL["📮 Email Provider<br/>📧 SendGrid / AWS SES<br/>📬 Reliable Delivery"]
         SMS_SERV["📲 SMS Provider<br/>📱 Twilio<br/>💬 Text Messaging"]
     end
@@ -230,24 +339,20 @@ graph TB
     GW -->|📋 Booking Requests| BS
     GW -->|✅ Approval Flows| AWS
     GW -->|📢 Notification Mgmt| NS
-    GW -->|💳 Payment Processing| PS
     
     US -->|💾 Store Users| USC
     GS -->|💾 Store Grounds| GSC
     BS -->|💾 Store Bookings| BSC
     AWS -->|💾 Store Workflows| AWSC
     NS -->|⚡ Cache Sessions| NSC
-    PS -->|💾 Store Transactions| PSC
     
     US -.->|👤 User Created/Updated| EB
     BS -.->|📋 Booking Events| EB
     AWS -.->|✅ Approval Events| EB
-    PS -.->|💰 Payment Events| EB
     
     EB -.->|🔔 Trigger Notifications| NS
     EB -.->|✅ Trigger Approvals| AWS
     
-    PS -->|💰 Process Payments| PAY
     NS -->|📧 Send Emails| EMAIL
     NS -->|📱 Send SMS| SMS_SERV
     
@@ -299,75 +404,114 @@ graph TB
 - Multi-channel support (Email, SMS, In-app)
 - Template management and personalization
 
-**Payment Service:**
-- Secure payment processing integration
-- Transaction history and refund management
-- Invoice generation and billing
 
-### Data Flow & Interactions
 
-This sequence diagram illustrates the complete user journey from registration to booking completion, showing interactions between all system components.
+### Detailed Booking Sequence Diagram
+
+This sequence diagram illustrates the detailed interaction flow for the main booking process, including all system components and decision points.
 
 ```mermaid
 sequenceDiagram
-    participant User
-    participant WebApp
-    participant APIGateway
-    participant UserService
-    participant GroundsService
-    participant BookingService
-    participant ApprovalService
-    participant NotificationService
-    participant PaymentService
-    participant EventBus
-    participant Database
+    actor User
+    participant UI as Web/Mobile UI
+    participant Gateway as API Gateway  
+    participant GroundSvc as Ground Service
+    participant BookingSvc as Booking Service
+    participant ApprovalSvc as Approval Service
+    participant NotifSvc as Notification Service
+    participant DB as Database
+    participant Cache as Redis Cache
     
-    Note over User, Database: User Registration & Login Flow
-    User->>WebApp: Register/Login
-    WebApp->>APIGateway: Authentication Request
-    APIGateway->>UserService: Validate Credentials
-    UserService->>Database: Store/Retrieve User Data
-    Database-->>UserService: User Data
-    UserService-->>APIGateway: Auth Token
-    APIGateway-->>WebApp: Authenticated Session
-    WebApp-->>User: Login Success
+    Note over User, Cache: Main Booking Flow
     
-    Note over User, Database: Booking Flow
-    User->>WebApp: Search Available Grounds
-    WebApp->>APIGateway: Get Grounds Request
-    APIGateway->>GroundsService: Fetch Available Grounds
-    GroundsService->>Database: Query Ground Availability
-    Database-->>GroundsService: Available Grounds
-    GroundsService-->>APIGateway: Grounds List
-    APIGateway-->>WebApp: Available Grounds
-    WebApp-->>User: Display Grounds
+    User->>UI: Search for grounds
+    UI->>Gateway: GET /api/grounds/search
+    Gateway->>GroundSvc: Search available grounds
+    GroundSvc->>DB: Query grounds & availability
+    DB-->>GroundSvc: Available grounds list
+    GroundSvc->>Cache: Cache search results
+    GroundSvc-->>Gateway: Grounds with availability
+    Gateway-->>UI: Search results
+    UI-->>User: Display available grounds
     
-    User->>WebApp: Create Booking
-    WebApp->>APIGateway: Booking Request
-    APIGateway->>BookingService: Process Booking
-    BookingService->>Database: Store Booking
-    BookingService->>EventBus: Publish Booking Event
+    User->>UI: Select ground & time slot
+    UI->>Gateway: GET /api/grounds/{id}/availability
+    Gateway->>GroundSvc: Check detailed availability
+    GroundSvc->>Cache: Check cached availability
+    alt Cache Hit
+        Cache-->>GroundSvc: Cached availability data
+    else Cache Miss
+        GroundSvc->>DB: Query real-time availability
+        DB-->>GroundSvc: Current availability
+        GroundSvc->>Cache: Update cache
+    end
+    GroundSvc-->>Gateway: Slot availability status
+    Gateway-->>UI: Availability confirmation
+    UI-->>User: Show available slots
     
-    EventBus->>ApprovalService: Booking Created Event
-    ApprovalService->>Database: Check Approval Rules
-    ApprovalService->>EventBus: Approval Required Event
+    User->>UI: Create booking request
+    UI->>Gateway: POST /api/bookings
+    Gateway->>BookingSvc: Create booking
     
-    EventBus->>NotificationService: Send Notification Event
-    NotificationService->>Database: Get Notification Templates
-    NotificationService-->>User: Send Email/SMS Notification
+    BookingSvc->>DB: Begin transaction
+    BookingSvc->>DB: Check slot availability (with lock)
     
-    Note over User, Database: Payment Flow
-    ApprovalService->>EventBus: Booking Approved Event
-    EventBus->>PaymentService: Process Payment Event
-    PaymentService->>PaymentService: Calculate Amount
-    PaymentService-->>User: Payment Request
-    User->>PaymentService: Payment Confirmation
-    PaymentService->>Database: Store Payment Record
-    PaymentService->>EventBus: Payment Completed Event
+    alt Slot Available
+        BookingSvc->>DB: Create booking record
+        BookingSvc->>DB: Update slot availability
+        BookingSvc->>DB: Commit transaction
+        
+        BookingSvc->>ApprovalSvc: Check approval requirements
+        ApprovalSvc->>DB: Query approval rules
+        
+        alt Auto-approval Enabled
+            ApprovalSvc->>DB: Set booking status: CONFIRMED
+            ApprovalSvc-->>BookingSvc: Auto-approved
+        else Manual Approval Required  
+            ApprovalSvc->>DB: Set booking status: PENDING
+            ApprovalSvc-->>BookingSvc: Pending approval
+        end
+        
+        BookingSvc->>NotifSvc: Send booking notification
+        NotifSvc->>DB: Get notification templates
+        NotifSvc-->>User: Email/SMS confirmation
+        
+        BookingSvc-->>Gateway: Booking created successfully
+        Gateway-->>UI: Success response
+        UI-->>User: Booking confirmation
+        
+    else Slot Conflict
+        BookingSvc->>DB: Rollback transaction
+        BookingSvc->>GroundSvc: Get alternative slots
+        GroundSvc->>DB: Query similar available slots
+        GroundSvc-->>BookingSvc: Alternative options
+        BookingSvc-->>Gateway: Conflict with alternatives
+        Gateway-->>UI: Conflict + alternatives
+        UI-->>User: Show alternative times
+    end
     
-    EventBus->>BookingService: Update Booking Status
-    EventBus->>NotificationService: Send Confirmation
-    NotificationService-->>User: Booking Confirmed
+    Note over User, Cache: Alternative Flow Handling
+    
+    opt User Selects Alternative
+        User->>UI: Select alternative slot
+        UI->>Gateway: POST /api/bookings (retry)
+        Note over Gateway, Cache: Repeat booking process with new slot
+    end
+    
+    Note over User, Cache: Cancellation Flow
+    
+    User->>UI: Cancel booking request
+    UI->>Gateway: DELETE /api/bookings/{id}
+    Gateway->>BookingSvc: Cancel booking
+    BookingSvc->>DB: Update booking status: CANCELLED
+    BookingSvc->>GroundSvc: Release slot availability  
+    GroundSvc->>DB: Update slot availability
+    GroundSvc->>Cache: Invalidate availability cache
+    BookingSvc->>NotifSvc: Send cancellation notification
+    NotifSvc-->>User: Cancellation confirmation
+    BookingSvc-->>Gateway: Cancellation success
+    Gateway-->>UI: Success response
+    UI-->>User: Cancellation confirmed
 ```
 
 #### Flow Description
